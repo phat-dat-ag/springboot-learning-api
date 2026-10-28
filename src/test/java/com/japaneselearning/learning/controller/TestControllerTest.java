@@ -41,7 +41,7 @@ class TestControllerTest {
     void publicTestEndpointLogsRequestWithCorrelationId(CapturedOutput output) throws Exception {
         var result = mockMvc.perform(get("/test"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Hello, test"))
+                .andExpect(jsonPath("$.data").value("Hello, test"))
                 .andExpect(header().exists("X-Correlation-ID"))
                 .andReturn();
 
