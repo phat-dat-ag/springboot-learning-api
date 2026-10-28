@@ -1,0 +1,102 @@
+
+# ==============================
+# Maven
+# ==============================
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Keep Maven Wrapper JAR if present
+!**/.mvn/wrapper/maven-wrapper.jar
+
+# ==============================
+# IntelliJ IDEA
+# ==============================
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# ==============================
+# Eclipse / STS
+# ==============================
+.classpath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+# ==============================
+# VS Code
+# ==============================
+.vscode/
+
+# ==============================
+# Environment & Secrets
+# ==============================
+.env
+.env.*
+!.env.example
+!.env.sample
+
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# ==============================
+# Logs
+# ==============================
+logs/
+**/logs/
+*.log
+*.log.*
+hs_err_pid*
+replay_pid*
+
+# ==============================
+# Temporary Files
+# ==============================
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ==============================
+# Test & Coverage Reports
+# ==============================
+coverage/
+.jacoco/
+*.exec
+
+# ==============================
+# Local Database Files
+# ==============================
+*.db
+*.sqlite
+*.sqlite3
+pgdata/
+postgres_data/
+
+# ==============================
+# Docker Local Overrides
+# ==============================
+docker-compose.override.yml
+compose.override.yml
+
+# ==============================
+# Local Application Config
+# ==============================
+application-local.properties
+application-local.yml
+application-local.yaml
