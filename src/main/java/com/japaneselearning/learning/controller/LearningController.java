@@ -1,8 +1,11 @@
 package com.japaneselearning.learning.controller;
 
 import com.japaneselearning.learning.common.controller.BaseController;
+import com.japaneselearning.learning.config.OpenApiConfig;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import com.japaneselearning.learning.common.response.APIResponse;
 import com.japaneselearning.learning.dto.response.LearningUserResponse;
+import lombok.NonNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -12,9 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/learning")
+@SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
 public class LearningController extends BaseController {
     @GetMapping("/me")
-    public ResponseEntity<APIResponse<LearningUserResponse>> me(
+    public ResponseEntity<@NonNull APIResponse<LearningUserResponse>> me(
             JwtAuthenticationToken authentication
     ) {
         return success(new LearningUserResponse(
