@@ -38,6 +38,7 @@ class JwtAuthenticationTest {
     private static final AtomicInteger REQUESTS = new AtomicInteger();
     private static volatile String jwks = publicKeys(V1, V2);
     private static volatile boolean unavailable;
+    private static volatile com.sun.net.httpserver.Headers lastHeaders;
     private static final HttpServer SERVER = server();
 
     @Autowired
@@ -203,8 +204,24 @@ class JwtAuthenticationTest {
         assertThatThrownBy(() -> decoder.decode(unknown)).isInstanceOf(JwtException.class);
     }
 
+    @Test
+    void decoderSendsCallerAndCurrentCorrelationHeaders() throws Exception {
+        org.slf4j.MDC.put("correlationId", "decoder-request-123");
+        try {
+            decoder().decode(token(V1, claims()));
+            assertThat(lastHeaders.get("X-Caller-Service")).containsExactly("learning-api");
+            assertThat(lastHeaders.getFirst("X-Caller-Instance")).isEqualTo("test-instance");
+            assertThat(lastHeaders.getFirst("X-Caller-Version")).isEqualTo("1.0");
+            assertThat(lastHeaders.getFirst("X-Correlation-ID")).isEqualTo("decoder-request-123");
+        } finally {
+            org.slf4j.MDC.remove("correlationId");
+        }
+    }
+
     private org.springframework.security.oauth2.jwt.JwtDecoder decoder() {
-        return new JwtDecoderConfig().jwtDecoder(new JwtSecurityProperties(uri(), ISSUER, Duration.ofSeconds(60)));
+        return new JwtDecoderConfig().jwtDecoder(new JwtSecurityProperties(uri(), ISSUER, Duration.ofSeconds(60)),
+                new com.japaneselearning.learning.client.JwksCallerInterceptor("learning-api", "test-instance", "1.0"),
+                new org.springframework.boot.restclient.RestTemplateBuilder());
     }
 
     private void request(String token, int status) throws Exception {
@@ -249,6 +266,7 @@ class JwtAuthenticationTest {
             HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
             server.createContext("/jwks", exchange -> {
                 REQUESTS.incrementAndGet();
+                lastHeaders = exchange.getRequestHeaders();
                 byte[] body = (unavailable ? "unavailable" : jwks).getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type", "application/json");
                 exchange.sendResponseHeaders(unavailable ? 503 : 200, body.length);

@@ -13,14 +13,19 @@ import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 
 import java.time.Instant;
+import com.japaneselearning.learning.client.JwksCallerInterceptor;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.boot.restclient.RestTemplateBuilder;
 
 @Configuration
 @EnableConfigurationProperties(JwtSecurityProperties.class)
 public class JwtDecoderConfig {
     @Bean
-    public JwtDecoder jwtDecoder(JwtSecurityProperties properties) {
+    public JwtDecoder jwtDecoder(JwtSecurityProperties properties, JwksCallerInterceptor caller, RestTemplateBuilder builder) {
+        RestTemplate jwksHttp = builder.additionalInterceptors(caller).build();
         NimbusJwtDecoder decoder = NimbusJwtDecoder
                 .withJwkSetUri(properties.jwkSetUri())
+                .restOperations(jwksHttp)
                 .jwsAlgorithm(SignatureAlgorithm.RS256)
                 .build();
 

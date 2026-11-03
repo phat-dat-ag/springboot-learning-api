@@ -34,3 +34,10 @@ While most of the inheritance is fine, it also inherits unwanted elements like `
 To prevent this, the project POM contains empty overrides for these elements.
 If you manually switch to a different parent and actually want the inheritance, you need to remove those overrides.
 
+
+### JWKS caller metadata
+
+Both integration and JWT decoder JWKS requests send X-Caller-Service from spring.application.name. Set APP_INSTANCE_ID and APP_VERSION to identify the deployment; defaults use the hostname (or a process UUID) and Maven project version. Values must match [A-Za-z0-9][A-Za-z0-9._-]{0,63}; invalid identity values are sent as unknown.
+
+X-Correlation-ID uses the current MDC correlationId, falling back to a fresh UUID when absent or invalid. The outbound fallback does not modify MDC. Existing tracing headers and Spring HTTP client customizations are retained.
+
