@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.beans.factory.annotation.Value;
 import com.japaneselearning.learning.client.JwksCallerInterceptor;
 
@@ -14,9 +15,30 @@ public class ServiceClientConfig {
     private final ServiceEndpointProperties properties;
 
     @Bean("jwksRestClient")
-    public RestClient jwksServiceRestClient(RestClient.Builder builder, JwksCallerInterceptor caller) {
+    public RestClient jwksServiceRestClient(
+            RestClient.Builder builder,
+            JwksCallerInterceptor caller
+    ) {
         return builder.clone()
                 .baseUrl(properties.getJwks().baseUrl())
+                .requestInterceptor(caller)
+                .build();
+    }
+
+    @Bean("userRestClient")
+    public RestClient userRestClient(
+            RestClient.Builder builder,
+            JwksCallerInterceptor caller
+    ) {
+        var endpoint = properties.getUser();
+        var requestFactory = new SimpleClientHttpRequestFactory();
+
+        requestFactory.setConnectTimeout(endpoint.connectTimeout());
+        requestFactory.setReadTimeout(endpoint.readTimeout());
+
+        return builder.clone()
+                .baseUrl(endpoint.baseUrl())
+                .requestFactory(requestFactory)
                 .requestInterceptor(caller)
                 .build();
     }
@@ -25,7 +47,8 @@ public class ServiceClientConfig {
     public JwksCallerInterceptor jwksCallerInterceptor(
             @Value("${spring.application.name}") String service,
             @Value("${app.instance-id}") String instance,
-            @Value("${app.version}") String version) {
+            @Value("${app.version}") String version
+    ) {
         return new JwksCallerInterceptor(service, instance, version);
     }
 }
