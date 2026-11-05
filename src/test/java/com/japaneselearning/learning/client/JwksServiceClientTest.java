@@ -2,14 +2,18 @@ package com.japaneselearning.learning.client;
 
 import com.japaneselearning.learning.config.ServiceClientConfig;
 import com.japaneselearning.learning.config.ServiceEndpointProperties;
+import com.japaneselearning.learning.security.InternalJwtTokenService;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
+
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.mockito.Mockito.*;
 
 class JwksServiceClientTest {
     @Test
@@ -38,5 +42,26 @@ class JwksServiceClientTest {
         } finally {
             MDC.remove("correlationId");
         }
+    }
+
+    @Test
+    void userAuthenticationDoesNotLeakIntoJwksClient() {
+        var properties = new ServiceEndpointProperties();
+        properties.setJwks(new ServiceEndpointProperties.JwksEndpoint("http://jwks", "/keys"));
+        properties.setUser(new ServiceEndpointProperties.UserEndpoint("http://user", "/internal/users",
+                Duration.ofSeconds(1), Duration.ofSeconds(2)));
+        var builder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        var config = new ServiceClientConfig(properties);
+        var caller = new JwksCallerInterceptor("learning-api", "test-instance", "1.0");
+        var tokens = mock(InternalJwtTokenService.class);
+        config.userRestClient(builder, caller, tokens, true);
+        var jwks = config.jwksServiceRestClient(builder, caller);
+        server.expect(requestTo("http://jwks/keys"))
+                .andExpect(headerDoesNotExist("Authorization"))
+                .andRespond(withSuccess("{\"keys\":[]}", MediaType.APPLICATION_JSON));
+        new JwksServiceClient(jwks, properties).getPublicKeys();
+        server.verify();
+        verifyNoInteractions(tokens);
     }
 }
