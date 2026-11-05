@@ -7,6 +7,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.beans.factory.annotation.Value;
 import com.japaneselearning.learning.client.JwksCallerInterceptor;
+import com.japaneselearning.learning.security.InternalJwtTokenService;
+import org.jspecify.annotations.Nullable;
 
 @Configuration
 @RequiredArgsConstructor
@@ -28,7 +30,13 @@ public class ServiceClientConfig {
     @Bean("userRestClient")
     public RestClient userRestClient(
             RestClient.Builder builder,
-            JwksCallerInterceptor caller
+            JwksCallerInterceptor caller,
+
+            @Nullable
+            InternalJwtTokenService tokens,
+
+            @Value("${services.user.internal-jwt-enabled:false}")
+            boolean internalJwtEnabled
     ) {
         var endpoint = properties.getUser();
         var requestFactory = new SimpleClientHttpRequestFactory();
@@ -36,11 +44,26 @@ public class ServiceClientConfig {
         requestFactory.setConnectTimeout(endpoint.connectTimeout());
         requestFactory.setReadTimeout(endpoint.readTimeout());
 
-        return builder.clone()
+        var userBuilder = builder.clone()
                 .baseUrl(endpoint.baseUrl())
                 .requestFactory(requestFactory)
-                .requestInterceptor(caller)
-                .build();
+                .requestInterceptor(caller);
+
+        if (internalJwtEnabled) {
+            if (tokens == null) {
+                throw new IllegalStateException(
+                        "User Service JWT attachment requires internal JWT signing to be enabled"
+                );
+            }
+
+            userBuilder.requestInterceptor((request, body, execution) -> {
+                request.getHeaders().setBearerAuth(tokens.generateToken().token());
+
+                return execution.execute(request, body);
+            });
+        }
+
+        return userBuilder.build();
     }
 
     @Bean
