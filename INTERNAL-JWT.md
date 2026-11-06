@@ -2,7 +2,7 @@
 
 Learning can generate its own short-lived service JWT using its own RSA private key.
 Outbound User requests can attach a freshly signed token when explicitly enabled.
-Inbound user authentication, User's internal endpoint security and JWKS are unchanged.
+Inbound user authentication is preserved. User's internal endpoint now validates Learning's service identity through its dedicated JWKS owner URL.
 There is no token-generation endpoint.
 
 ## Configuration
@@ -21,7 +21,7 @@ or unreadable/invalid keys fail startup rather than delaying failure until a req
 | `APP_SECURITY_SIGNING_KEYS_0_PRIVATEKEYPATH` | `app.security.signing.keys[0].private-key-path` | Required when enabled; path to Learning's PKCS#8 PEM |
 | `APP_SECURITY_SIGNING_KEYS_0_ACTIVE` | `app.security.signing.keys[0].active` | Exactly one configured key must be true |
 | `LEARNING_SIGNING_KEYS_DIR` | Compose bind source only | `./data/keys/learning` on the host |
-| `USER_SERVICE_INTERNAL_JWT_ENABLED` | `services.user.internal-jwt-enabled` | Default false; attach a fresh service JWT on every User-client request |
+| `USER_SERVICE_INTERNAL_JWT_ENABLED` | `services.user.internal-jwt-enabled` | Local default false, Compose true; attach a fresh service JWT on every User-client request |
 
 Identity, TTL, key IDs and file paths are configuration, not key contents. Do not put PEM
 contents or signed JWTs into environment files or logs. The private PEM itself is secret.
@@ -39,14 +39,14 @@ The development Learning pair is stored under root `data/keys/learning`:
 
 ```text
 learningservice-private-v1.pem   PKCS#8 RSA private key, Learning only
-learningservice-public-v1.pem    SubjectPublicKeyInfo public key, for tests/future publication
+learningservice-public-v1.pem    SubjectPublicKeyInfo public key, published by JWKS for the Learning owner
 ```
 
 Root `data/` and `.env.learning-api` are already Git-ignored. The example file is tracked.
 Never stage real keys or real environment files. No private key belongs in an image or Git.
 
-Compose mounts only the Learning directory at `/run/keys/learning`, read-only, with
-`create_host_path: false`. It is separate from the existing User/JWKS `./key` mount.
+Compose mounts only the configured private PEM at `/run/keys/learning/learningservice-private-v1.pem`, read-only, with
+`create_host_path: false`. User and JWKS also use separate individual-file mounts; JWKS receives no private key.
 The directory must exist and the private files must be readable by container UID/GID 10001.
 Keys are loaded at startup; replacing files or switching the active key requires a restart.
 
@@ -60,6 +60,7 @@ Configure the existing database, user-token issuer and JWKS variables as usual, 
 
 ```powershell
 $env:LEARNING_INTERNAL_JWT_ENABLED='true'
+$env:USER_SERVICE_INTERNAL_JWT_ENABLED='true'
 $env:LEARNING_INTERNAL_JWT_ISSUER='learning-service'
 $env:LEARNING_INTERNAL_JWT_AUDIENCE='user-service'
 $env:LEARNING_INTERNAL_JWT_TTL='60s'
@@ -91,14 +92,11 @@ or zero/multiple active keys fail startup. Each generated JWT's `kid` comes from
 active key. Configuration changes do not mutate the key cached by an already running process.
 
 Use `PRIVATEKEYPATH` without underscores between words for direct Spring environment binding.
-User's first-key configuration uses an explicit `PRIVATE_KEY_PATH` placeholder, but copying that
-spelling to additional automatically bound entries produces nested `private.key.path`, not
-`privateKeyPath`. Learning's environment names use the canonical spelling consistently and have
+The `PRIVATE_KEY_PATH` spelling produces nested `private.key.path` for direct indexed environment binding, not `privateKeyPath`. Learning's environment names use the canonical spelling consistently and have
 a regression test binding two complete indexed keys from a system-environment property source.
 
 Future rotation with a verifier must publish the new public key before selecting its private
-key and retain old verification keys until issued tokens expire. This implementation changes neither
-JWKS configuration nor receiver validation.
+key and retain old verification keys until issued tokens expire. Register new public keys with OWNER=LEARNING and add explicit private/public file mounts to their respective containers.
 
 ## Token contract and usage
 
@@ -134,40 +132,17 @@ Tests generate temporary keys. They verify RS256 signatures, exact header/claims
 issuer semantics, tampering, wrong-key rejection, unique IDs, redacted output, cached key loading,
 invalid/weak/non-RSA keys, indexed configuration, active-key rotation and disabled behavior.
 They neither read the development private key nor print JWT values. Existing user JWT tests
-continue exercising the unchanged inbound security configuration. No live two-service internal
-token authentication is claimed: User verification is not implemented here.
+continue exercising the unchanged inbound security configuration. User verification uses its independent internal decoder. See the root security integration report for live checks actually performed.
 
-## Attaching tokens to User requests
+## Authenticated User requests
 
-Set `USER_SERVICE_INTERNAL_JWT_ENABLED=true` in the root `.env` (or the local process environment)
-only after User is configured to trust Learning's issuer and public keys. Compose forwards this
-setting to Learning. `LEARNING_INTERNAL_JWT_ENABLED=true` is also required; otherwise Learning
-fails startup with a clear configuration error rather than silently sending anonymous requests.
+Compose enables `USER_SERVICE_INTERNAL_JWT_ENABLED=true` and signing. Every request through
+`userRestClient` receives a fresh Learning-signed bearer token; incoming user tokens are replaced,
+not forwarded. JWKS clients do not receive the token. Signing failures send no anonymous request.
 
-The User RestClient adds `Authorization: Bearer <internal JWT>` for every request through that
-client. It generates a fresh token for each execution, replacing an existing Authorization header
-instead of forwarding a user's access token. Caller/correlation metadata and timeouts remain intact.
-If signing fails, the request is not sent. JWKS clients do not receive this interceptor.
+User now uses an isolated internal decoder at `/api/v1/jwks/learning`. External user-token
+validation in both applications uses `/api/v1/jwks/user`. The internal endpoint rejects anonymous
+requests and normal user tokens. Do not change Learning's inbound `JWT_ISSUER` to Learning's issuer.
 
-Attachment defaults to false because User currently uses its user-token decoder for all bearer
-headers, including requests to anonymously permitted routes. Attaching Learning's token now makes
-that decoder reject it with 401; `permitAll` does not skip bearer authentication. Do not enable
-attachment against the current User configuration. User/JWKS verification changes are separate work.
-
-Validation performed for this implementation:
-
-- Focused Learning suite after outbound attachment: 53 passed, including all 21 internal-signing
-  tests, per-request bearer/signature checks, no anonymous fallback on signing failure,
-  disabled behavior and JWKS isolation.
-- Prior full Learning suite (before attachment): 71 run, 70 passed, 1 failed in the existing
-  `JwtAuthenticationTest.userTokenWithV1` authority-order assertion: expected `ROLE_USER`
-  at index zero, received `FACTOR_BEARER`. That test and inbound authentication code are unchanged.
-- User's full regression suite: 39 passed; no User source/configuration changes.
-- Learning `package -DskipTests`: passed (tests compiled, not executed by this command).
-- Compose configuration and Git diff whitespace checks passed.
-- A temporary network-isolated container using the existing Learning image confirmed UID/GID
-  10001 can read the dedicated key mount, without printing its contents.
-- Running services were not rebuilt or restarted; no end-to-end internal-token authentication
-  was performed. JWKS remains unchanged.
-- Postman CLI validation is unavailable because its managed Private Cloud manifest cannot
-  be read. Outbound HTTP tests use a local JDK server with the real configured RestClient.
+Run `mvnw.cmd -B -ntp verify` for signing, HTTP attachment and inbound user-token regressions.
+See root `JWT-AUTHENTICATION.md` for the complete environment and trust configuration.
