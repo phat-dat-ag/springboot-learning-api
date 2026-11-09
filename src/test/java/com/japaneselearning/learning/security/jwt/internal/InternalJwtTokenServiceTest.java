@@ -1,8 +1,5 @@
-package com.japaneselearning.learning.security;
+package com.japaneselearning.learning.security.jwt.internal;
 
-import com.japaneselearning.learning.config.InternalJwtConfig;
-import com.japaneselearning.learning.config.InternalJwtProperties;
-import com.japaneselearning.learning.config.InternalSigningKeyProperties;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;

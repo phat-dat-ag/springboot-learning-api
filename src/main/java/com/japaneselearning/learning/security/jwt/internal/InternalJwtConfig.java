@@ -1,12 +1,13 @@
-package com.japaneselearning.learning.config;
+package com.japaneselearning.learning.security.jwt.internal;
 
-import com.japaneselearning.learning.security.InternalJwtTokenService;
-import com.japaneselearning.learning.security.InternalSigningKeyProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Enables outbound Learning identity signing without changing incoming user authentication.
+ */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(
         prefix = "app.security.internal-jwt",

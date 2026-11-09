@@ -1,5 +1,9 @@
 # Learning internal JWT signing and outbound authentication
 
+Start with [README.md](README.md) for the package map, permissions, error behavior
+and debugger walkthrough. Signing classes now live in `security/jwt/internal`;
+incoming user-token verification lives in `security/jwt/user`.
+
 Learning can generate its own short-lived service JWT using its own RSA private key.
 Outbound User requests can attach a freshly signed token when explicitly enabled.
 Inbound user authentication, User's internal endpoint security and JWKS are unchanged.
@@ -102,7 +106,8 @@ JWKS configuration nor receiver validation.
 
 ## Token contract and usage
 
-`ServiceClientConfig` uses `InternalJwtTokenService` for User requests when attachment is enabled.
+`ServiceClientConfig` registers `ServiceTokenInterceptor` for User requests when
+attachment is enabled. The interceptor calls `InternalJwtTokenService` for each request.
 For other internal callers, the signing API is:
 
 ```java

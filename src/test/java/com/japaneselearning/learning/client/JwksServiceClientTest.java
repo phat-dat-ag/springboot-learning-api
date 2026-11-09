@@ -1,8 +1,9 @@
 package com.japaneselearning.learning.client;
 
+import com.japaneselearning.learning.security.jwks.CallerMetadataInterceptor;
 import com.japaneselearning.learning.config.ServiceClientConfig;
 import com.japaneselearning.learning.config.ServiceEndpointProperties;
-import com.japaneselearning.learning.security.InternalJwtTokenService;
+import com.japaneselearning.learning.security.jwt.internal.InternalJwtTokenService;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 import org.springframework.http.MediaType;
@@ -27,7 +28,7 @@ class JwksServiceClientTest {
         });
         var server = MockRestServiceServer.bindTo(builder).build();
         var client = new ServiceClientConfig(properties).jwksServiceRestClient(builder,
-                new JwksCallerInterceptor("learning-api", "pod-7", "1.0"));
+                new CallerMetadataInterceptor("learning-api", "pod-7", "1.0"));
         server.expect(requestTo("http://jwks/keys"))
                 .andExpect(header("X-Caller-Service", "learning-api"))
                 .andExpect(header("X-Caller-Instance", "pod-7"))
@@ -53,7 +54,7 @@ class JwksServiceClientTest {
         var builder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(builder).build();
         var config = new ServiceClientConfig(properties);
-        var caller = new JwksCallerInterceptor("learning-api", "test-instance", "1.0");
+        var caller = new CallerMetadataInterceptor("learning-api", "test-instance", "1.0");
         var tokens = mock(InternalJwtTokenService.class);
         config.userRestClient(builder, caller, tokens, true);
         var jwks = config.jwksServiceRestClient(builder, caller);

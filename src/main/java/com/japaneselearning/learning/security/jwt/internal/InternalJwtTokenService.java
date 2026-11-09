@@ -1,6 +1,5 @@
-package com.japaneselearning.learning.security;
+package com.japaneselearning.learning.security.jwt.internal;
 
-import com.japaneselearning.learning.config.InternalJwtProperties;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;

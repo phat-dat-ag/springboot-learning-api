@@ -1,4 +1,4 @@
-package com.japaneselearning.learning.config;
+package com.japaneselearning.learning.security.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,14 +8,17 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import com.japaneselearning.learning.security.JwtRoleConverter;
+import com.japaneselearning.learning.security.jwt.user.JwtRoleConverter;
 import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.AuthenticationEntryPointFailureHandler;
 
-@Configuration
-public class SecurityConfig {
+/**
+ * Authenticates incoming user tokens; outbound service signing is configured separately.
+ */
+@Configuration("securityConfig")
+public class UserSecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtRoleConverter roles) throws Exception {

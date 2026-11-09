@@ -2,10 +2,10 @@ package com.japaneselearning.learning.controller;
 
 import com.japaneselearning.learning.common.exception.BusinessException;
 import com.japaneselearning.learning.common.exception.ErrorCode;
-import com.japaneselearning.learning.config.SecurityConfig;
+import com.japaneselearning.learning.security.config.UserSecurityConfig;
 import com.japaneselearning.learning.dto.InternalUserDTO;
 import com.japaneselearning.learning.dto.response.InternalUserResponse;
-import com.japaneselearning.learning.security.JwtRoleConverter;
+import com.japaneselearning.learning.security.jwt.user.JwtRoleConverter;
 import com.japaneselearning.learning.service.impl.InternalUserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(InternalUserController.class)
-@Import({SecurityConfig.class, JwtRoleConverter.class})
+@Import({UserSecurityConfig.class, JwtRoleConverter.class})
 class InternalUserControllerTest {
     private static final UUID ID = UUID.fromString("f05bf709-5cb8-4a4c-9ac4-e537b5579aef");
     private static final String PATH = "/api/v1/learning/internal-test/users/" + ID;

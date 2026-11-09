@@ -1,4 +1,4 @@
-package com.japaneselearning.learning.security;
+package com.japaneselearning.learning.security.jwt.user;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.GrantedAuthority;

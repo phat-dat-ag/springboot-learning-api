@@ -6,8 +6,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.beans.factory.annotation.Value;
-import com.japaneselearning.learning.client.JwksCallerInterceptor;
-import com.japaneselearning.learning.security.InternalJwtTokenService;
+import com.japaneselearning.learning.security.jwks.CallerMetadataInterceptor;
+import com.japaneselearning.learning.security.jwt.internal.InternalJwtTokenService;
+import com.japaneselearning.learning.security.jwt.internal.ServiceTokenInterceptor;
 import org.jspecify.annotations.Nullable;
 
 @Configuration
@@ -19,7 +20,7 @@ public class ServiceClientConfig {
     @Bean("jwksRestClient")
     public RestClient jwksServiceRestClient(
             RestClient.Builder builder,
-            JwksCallerInterceptor caller
+            CallerMetadataInterceptor caller
     ) {
         return builder.clone()
                 .baseUrl(properties.getJwks().baseUrl())
@@ -30,7 +31,7 @@ public class ServiceClientConfig {
     @Bean("userRestClient")
     public RestClient userRestClient(
             RestClient.Builder builder,
-            JwksCallerInterceptor caller,
+            CallerMetadataInterceptor caller,
 
             @Nullable
             InternalJwtTokenService tokens,
@@ -56,22 +57,18 @@ public class ServiceClientConfig {
                 );
             }
 
-            userBuilder.requestInterceptor((request, body, execution) -> {
-                request.getHeaders().setBearerAuth(tokens.generateToken().token());
-
-                return execution.execute(request, body);
-            });
+            userBuilder.requestInterceptor(new ServiceTokenInterceptor(tokens));
         }
 
         return userBuilder.build();
     }
 
     @Bean
-    public JwksCallerInterceptor jwksCallerInterceptor(
+    public CallerMetadataInterceptor jwksCallerInterceptor(
             @Value("${spring.application.name}") String service,
             @Value("${app.instance-id}") String instance,
             @Value("${app.version}") String version
     ) {
-        return new JwksCallerInterceptor(service, instance, version);
+        return new CallerMetadataInterceptor(service, instance, version);
     }
 }
