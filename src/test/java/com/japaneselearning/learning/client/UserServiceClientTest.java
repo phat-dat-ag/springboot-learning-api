@@ -1,13 +1,14 @@
 package com.japaneselearning.learning.client;
 
+import com.japaneselearning.learning.security.jwks.CallerMetadataInterceptor;
 import com.japaneselearning.learning.common.exception.BusinessException;
 import com.japaneselearning.learning.common.exception.ErrorCode;
 import com.japaneselearning.learning.config.ServiceClientConfig;
 import com.japaneselearning.learning.config.ServiceEndpointProperties;
-import com.japaneselearning.learning.config.InternalJwtProperties;
-import com.japaneselearning.learning.config.InternalSigningKeyProperties;
-import com.japaneselearning.learning.security.InternalJwtTokenService;
-import com.japaneselearning.learning.security.InternalSigningKeyProvider;
+import com.japaneselearning.learning.security.jwt.internal.InternalJwtProperties;
+import com.japaneselearning.learning.security.jwt.internal.InternalSigningKeyProperties;
+import com.japaneselearning.learning.security.jwt.internal.InternalJwtTokenService;
+import com.japaneselearning.learning.security.jwt.internal.InternalSigningKeyProvider;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.sun.net.httpserver.HttpServer;
@@ -99,7 +100,7 @@ class UserServiceClientTest {
             builder.defaultHeader("Authorization", "Bearer user-token-must-not-be-forwarded");
         }
         var restClient = new ServiceClientConfig(properties).userRestClient(builder,
-                new JwksCallerInterceptor("learning-api", "test-instance", "1.0"), tokens, attach);
+                new CallerMetadataInterceptor("learning-api", "test-instance", "1.0"), tokens, attach);
         return new UserServiceClient(restClient, properties);
     }
 

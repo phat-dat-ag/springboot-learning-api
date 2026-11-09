@@ -1,4 +1,4 @@
-package com.japaneselearning.learning.client;
+package com.japaneselearning.learning.security.jwks;
 
 import com.japaneselearning.learning.common.filter.CorrelationIdFilter;
 import org.slf4j.MDC;
@@ -11,11 +11,15 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * Adds caller metadata without changing tracing headers managed by instrumentation.
+ * Adds diagnostic caller metadata to outbound User and JWKS requests.
+ * These self-reported headers are not authentication credentials.
+ * Tracing headers managed by instrumentation are left unchanged.
  */
-public record JwksCallerInterceptor(String service, String instance, String version)
-        implements ClientHttpRequestInterceptor {
-    public JwksCallerInterceptor {
+public record CallerMetadataInterceptor(
+        String service, String instance, String version
+) implements ClientHttpRequestInterceptor {
+
+    public CallerMetadataInterceptor {
         service = identity(service);
         instance = identity(instance);
         version = identity(version);
@@ -30,15 +34,24 @@ public record JwksCallerInterceptor(String service, String instance, String vers
     }
 
     @Override
-    public ClientHttpResponse intercept(HttpRequest request, byte[] body,
-                                        ClientHttpRequestExecution execution) throws IOException {
+    public ClientHttpResponse intercept(
+            HttpRequest request,
+            byte[] body,
+            ClientHttpRequestExecution execution
+    ) throws IOException {
         var headers = request.getHeaders();
+
         headers.set("X-Caller-Service", service);
         headers.set("X-Caller-Instance", instance);
         headers.set("X-Caller-Version", version);
+
         String correlationId = MDC.get(CorrelationIdFilter.CORRELATION_ID);
-        headers.set(CorrelationIdFilter.HEADER_NAME,
-                valid(correlationId) ? correlationId : UUID.randomUUID().toString());
+
+        headers.set(
+                CorrelationIdFilter.HEADER_NAME,
+                valid(correlationId) ? correlationId : UUID.randomUUID().toString()
+        );
+
         return execution.execute(request, body);
     }
 }

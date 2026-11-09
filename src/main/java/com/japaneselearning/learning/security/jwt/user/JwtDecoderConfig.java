@@ -1,4 +1,4 @@
-package com.japaneselearning.learning.config;
+package com.japaneselearning.learning.security.jwt.user;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -13,15 +13,19 @@ import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 
 import java.time.Instant;
-import com.japaneselearning.learning.client.JwksCallerInterceptor;
+
+import com.japaneselearning.learning.security.jwks.CallerMetadataInterceptor;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.boot.restclient.RestTemplateBuilder;
 
+/**
+ * Verifies incoming user access tokens using User's public keys from JWKS.
+ */
 @Configuration
 @EnableConfigurationProperties(JwtSecurityProperties.class)
 public class JwtDecoderConfig {
     @Bean
-    public JwtDecoder jwtDecoder(JwtSecurityProperties properties, JwksCallerInterceptor caller, RestTemplateBuilder builder) {
+    public JwtDecoder jwtDecoder(JwtSecurityProperties properties, CallerMetadataInterceptor caller, RestTemplateBuilder builder) {
         RestTemplate jwksHttp = builder.additionalInterceptors(caller).build();
         NimbusJwtDecoder decoder = NimbusJwtDecoder
                 .withJwkSetUri(properties.jwkSetUri())

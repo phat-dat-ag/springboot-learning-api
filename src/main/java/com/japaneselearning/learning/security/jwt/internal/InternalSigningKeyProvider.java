@@ -1,6 +1,5 @@
-package com.japaneselearning.learning.security;
+package com.japaneselearning.learning.security.jwt.internal;
 
-import com.japaneselearning.learning.config.InternalSigningKeyProperties;
 
 import java.io.IOException;
 import java.nio.file.Files;

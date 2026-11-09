@@ -1,7 +1,5 @@
-package com.japaneselearning.learning.controller;
+package com.japaneselearning.learning.security.jwt.user;
 
-import com.japaneselearning.learning.config.JwtDecoderConfig;
-import com.japaneselearning.learning.config.JwtSecurityProperties;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.*;
@@ -220,7 +218,7 @@ class JwtAuthenticationTest {
 
     private org.springframework.security.oauth2.jwt.JwtDecoder decoder() {
         return new JwtDecoderConfig().jwtDecoder(new JwtSecurityProperties(uri(), ISSUER, Duration.ofSeconds(60)),
-                new com.japaneselearning.learning.client.JwksCallerInterceptor("learning-api", "test-instance", "1.0"),
+                new com.japaneselearning.learning.security.jwks.CallerMetadataInterceptor("learning-api", "test-instance", "1.0"),
                 new org.springframework.boot.restclient.RestTemplateBuilder());
     }
 
