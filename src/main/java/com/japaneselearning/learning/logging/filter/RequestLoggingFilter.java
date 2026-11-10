@@ -28,6 +28,8 @@ import java.util.concurrent.Callable;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.async.CallableProcessingInterceptor;
 import org.springframework.web.context.request.async.WebAsyncUtils;
+import com.japaneselearning.learning.metrics.SecurityMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.UUID;
 import java.util.LinkedHashMap;
@@ -53,6 +55,13 @@ public final class RequestLoggingFilter extends OncePerRequestFilter {
     private static final Set<String> OWNED = Set.of("correlationId", "callerService", "callerInstance",
             "callerVersion", "callerIdentitySource", "peerAddress", "protocol", "callerTraceId", "callerSpanId",
             "event", "errorCode", "key_count", "httpMethod", "uri", "status", "elapsed_ms", "userAgent");
+    private SecurityMetrics securityMetrics;
+
+    @Autowired(required = false)
+    public void setSecurityMetrics(SecurityMetrics metrics) {
+        this.securityMetrics = metrics;
+    }
+
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
 
     @Override
@@ -87,7 +96,7 @@ public final class RequestLoggingFilter extends OncePerRequestFilter {
 
             state = new RequestState(request, response, incoming != null && ID.matcher(incoming).matches()
                     ? incoming
-                    : UUID.randomUUID().toString());
+                    : UUID.randomUUID().toString(), securityMetrics);
 
             request.setAttribute(STATE, state);
         }
@@ -226,6 +235,7 @@ public final class RequestLoggingFilter extends OncePerRequestFilter {
     }
 
     private static final class RequestState implements AsyncListener {
+        private final SecurityMetrics metrics;
         private final HttpServletRequest request;
         private final HttpServletResponse response;
         private final String correlationId;
@@ -246,8 +256,10 @@ public final class RequestLoggingFilter extends OncePerRequestFilter {
         private RequestState(
                 HttpServletRequest request,
                 HttpServletResponse response,
-                String correlationId
+                String correlationId,
+                SecurityMetrics metrics
         ) {
+            this.metrics = metrics;
             this.request = request;
             this.response = response;
             this.correlationId = correlationId;
@@ -321,6 +333,14 @@ public final class RequestLoggingFilter extends OncePerRequestFilter {
                 int status = response.getStatus();
                 // Fallback only when no actual error status has been set at final completion.
                 if ((failure != null || timedOut) && !response.isCommitted() && status < 400) status = 500;
+                if (metrics != null)
+                    metrics.completed(
+                            method(),
+                            route,
+                            request.getRequestURI().startsWith("/internal/"),
+                            status
+                    );
+
                 String outcome = status >= 500 ? "server_error" : status >= 400 ? "client_error"
                         : status >= 100 && status < 400 ? "success" : "unknown";
 
@@ -329,7 +349,9 @@ public final class RequestLoggingFilter extends OncePerRequestFilter {
 
                 String path = request.getRequestURI();
 
-                boolean health = path.equals("/actuator/health") || path.startsWith("/actuator/health/");
+                boolean health = path.equals("/actuator/health")
+                        || path.startsWith("/actuator/health/")
+                        || path.equals("/actuator/prometheus");
 
                 Level level = status >= 500 ? Level.ERROR : status >= 400 ? Level.WARN : health ? Level.DEBUG : Level.INFO;
 
