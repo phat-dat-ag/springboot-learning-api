@@ -22,6 +22,11 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 
+import jakarta.servlet.http.HttpServletRequest;
+import com.japaneselearning.learning.logging.filter.RequestLoggingFilter;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -130,7 +135,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<@NonNull APIResponse<Void>> handleDataIntegrityViolation(
             DataIntegrityViolationException ex
     ) {
-        log.warn("Database integrity constraint violation");
 
         return buildErrorResponse(
                 ErrorCode.INVALID_REQUEST,
@@ -142,9 +146,12 @@ public class GlobalExceptionHandler {
     // 8. Unexpected exceptions
     @ExceptionHandler(Exception.class)
     public ResponseEntity<@NonNull APIResponse<Void>> handleUnexpectedException(
-            Exception ex
+            Exception ex,
+            HttpServletRequest request
     ) {
-        log.error("Unexpected application error", ex);
+        if (!RequestLoggingFilter.recordHandledFailure(request, ex)) {
+            log.error("Unexpected application error", ex);
+        }
 
         return buildErrorResponse(
                 ErrorCode.INTERNAL_SERVER_ERROR,
@@ -174,6 +181,14 @@ public class GlobalExceptionHandler {
             String message,
             APIError error
     ) {
+        if (RequestContextHolder.getRequestAttributes()
+                instanceof ServletRequestAttributes attributes
+        ) {
+            RequestLoggingFilter.recordErrorCode(
+                    attributes.getRequest(),
+                    errorCode.name()
+            );
+        }
         APIResponse<Void> response = APIResponse.failure(
                 errorCode.name(),
                 message,

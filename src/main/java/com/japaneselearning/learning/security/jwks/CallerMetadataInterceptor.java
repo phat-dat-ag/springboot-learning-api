@@ -1,6 +1,6 @@
 package com.japaneselearning.learning.security.jwks;
 
-import com.japaneselearning.learning.common.filter.CorrelationIdFilter;
+import com.japaneselearning.learning.logging.filter.RequestLoggingFilter;
 import org.slf4j.MDC;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
@@ -45,10 +45,10 @@ public record CallerMetadataInterceptor(
         headers.set("X-Caller-Instance", instance);
         headers.set("X-Caller-Version", version);
 
-        String correlationId = MDC.get(CorrelationIdFilter.CORRELATION_ID);
+        String correlationId = MDC.get(RequestLoggingFilter.CORRELATION_ID);
 
         headers.set(
-                CorrelationIdFilter.HEADER_NAME,
+                RequestLoggingFilter.HEADER_NAME,
                 valid(correlationId) ? correlationId : UUID.randomUUID().toString()
         );
 

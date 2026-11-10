@@ -111,6 +111,18 @@ class UserServiceClientTest {
     }
 
     @Test
+    void validatedIncomingCorrelationReachesUserHttpCallAndResponse() throws Exception {
+        var request = new org.springframework.mock.web.MockHttpServletRequest("GET", "/lookup");
+        var response = new org.springframework.mock.web.MockHttpServletResponse();
+        request.addHeader("X-Correlation-ID", "incoming-learning-user-check");
+        new com.japaneselearning.learning.logging.filter.RequestLoggingFilter().doFilter(request, response,
+                (incoming, outgoing) -> client.getUser(ID));
+        assertThat(correlation.get()).isEqualTo("incoming-learning-user-check");
+        assertThat(response.getHeader("X-Correlation-ID")).isEqualTo("incoming-learning-user-check");
+        assertThat(MDC.get("correlationId")).isNull();
+    }
+
+    @Test
     void readsCurrentUserContractAndSendsMetadataWithoutAuthentication() {
         MDC.put("correlationId", "request-123");
         var response = client.getUser(ID);

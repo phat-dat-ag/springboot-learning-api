@@ -25,14 +25,13 @@ public class JwksIntegrationController extends BaseController {
     @GetMapping()
     @Procedure(MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<@NonNull APIResponse<PublicKeysResponse>> getPublicKeys() {
-        log.info("Received get all public keys request");
+        log.debug("Public key lookup requested");
 
         PublicKeysResponse publicKeys = jwksIntegrationService.getPublicKeys();
 
-        log.info(
-                "Got all public key successfully, publicKeysCount={}",
-                publicKeys.keys().size()
-        );
+        log.atDebug()
+                .addKeyValue("key_count", publicKeys.keys().size())
+                .log("Public key lookup completed");
 
         return success(publicKeys);
     }
