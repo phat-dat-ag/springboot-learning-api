@@ -73,7 +73,7 @@ class JwtAuthenticationTest {
         mvc.perform(get("/api/v1/learning/me").header("Authorization", "Bearer " + token(V1, claims())))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.userId").value("42"))
-                .andExpect(jsonPath("$.data.authorities[0]").value("ROLE_USER"))
+                .andExpect(jsonPath("$.data.authorities").value(org.hamcrest.Matchers.hasItem("ROLE_USER")))
                 .andExpect(jsonPath("$.data.issuer").value(ISSUER))
                 .andExpect(jsonPath("$.data.token").doesNotExist())
                 .andExpect(cookie().doesNotExist("JSESSIONID"));
@@ -83,7 +83,8 @@ class JwtAuthenticationTest {
     void adminTokenWithV2() throws Exception {
         mvc.perform(get("/api/v1/learning/me").header("Authorization", "Bearer " +
                         token(V2, claims().claim("role", 2))))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.authorities[0]").value("ROLE_ADMIN"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.authorities").value(org.hamcrest.Matchers.hasItem("ROLE_ADMIN")));
     }
 
     @Test
