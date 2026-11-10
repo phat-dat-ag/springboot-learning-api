@@ -8,7 +8,7 @@
             source="spring.application.name"
             defaultValue="learning-api"/>
 
-    <!-- Stable metadata only; request-field/schema migration belongs to Phase 1. -->
+    <!-- Stable identity is shared with the Phase 1 request schema. -->
     <springProperty
             scope="context"
             name="SERVICE_VERSION"
@@ -26,22 +26,10 @@
 
     <!-- Console appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <includeContext>false</includeContext>
-            <includeMdcKeyName>correlationId</includeMdcKeyName>
-            <includeMdcKeyName>traceId</includeMdcKeyName>
-            <includeMdcKeyName>spanId</includeMdcKeyName>
-            <customFields>
-                {
-                "service":"${SERVICE_NAME}",
-                "serviceVersion":"${SERVICE_VERSION}",
-                "environment":"${DEPLOYMENT_ENVIRONMENT}"
-                }
-            </customFields>
-            <includeMdcKeyName>httpMethod</includeMdcKeyName>
-            <includeMdcKeyName>uri</includeMdcKeyName>
-            <includeMdcKeyName>status</includeMdcKeyName>
-            <includeMdcKeyName>elapsed_ms</includeMdcKeyName>
+        <encoder class="com.japaneselearning.learning.logging.StructuredJsonEncoder">
+            <serviceName>${SERVICE_NAME}</serviceName>
+            <serviceVersion>${SERVICE_VERSION}</serviceVersion>
+            <environment>${DEPLOYMENT_ENVIRONMENT}</environment>
         </encoder>
     </appender>
 
@@ -60,24 +48,16 @@
 
         </rollingPolicy>
 
-        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <includeContext>false</includeContext>
-            <includeMdcKeyName>correlationId</includeMdcKeyName>
-            <includeMdcKeyName>traceId</includeMdcKeyName>
-            <includeMdcKeyName>spanId</includeMdcKeyName>
-            <customFields>
-                {
-                "service":"${SERVICE_NAME}"
-                "serviceVersion":"${SERVICE_VERSION}",
-                "environment":"${DEPLOYMENT_ENVIRONMENT}"
-                }
-            </customFields>
-            <includeMdcKeyName>httpMethod</includeMdcKeyName>
-            <includeMdcKeyName>uri</includeMdcKeyName>
-            <includeMdcKeyName>status</includeMdcKeyName>
-            <includeMdcKeyName>elapsed_ms</includeMdcKeyName>
+        <encoder class="com.japaneselearning.learning.logging.StructuredJsonEncoder">
+            <serviceName>${SERVICE_NAME}</serviceName>
+            <serviceVersion>${SERVICE_VERSION}</serviceVersion>
+            <environment>${DEPLOYMENT_ENVIRONMENT}</environment>
         </encoder>
     </appender>
+
+    <!-- Request completion owns safe diagnostics; suppress framework raw-path warnings. -->
+    <logger name="org.springframework.web.servlet.PageNotFound" level="OFF"/>
+    <logger name="org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration" level="OFF"/>
 
     <root level="${LOG_LEVEL}">
         <appender-ref ref="CONSOLE"/>

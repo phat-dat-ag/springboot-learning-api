@@ -1,0 +1,69 @@
+package com.japaneselearning.learning.logging;
+
+import ch.qos.logback.classic.pattern.ThrowableHandlingConverter;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.IThrowableProxy;
+
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+
+/**
+ * Retains stack frames and cause types without rendering potentially secret exception messages.
+ */
+public final class SafeThrowableConverter extends ThrowableHandlingConverter {
+    @Override
+    public String convert(ILoggingEvent event) {
+        StringBuilder result = new StringBuilder();
+
+        append(
+                result,
+                event.getThrowableProxy(),
+                "",
+                Collections.newSetFromMap(new IdentityHashMap<>()),
+                0
+        );
+
+        return result.toString();
+    }
+
+    private void append(
+            StringBuilder result,
+            IThrowableProxy error,
+            String prefix,
+            Set<IThrowableProxy> seen,
+            int depth
+    ) {
+        if (error == null
+                || !seen.add(error)
+                || depth >= 8
+                || seen.size() > 16
+                || result.length() >= 8192
+        ) {
+            return;
+        }
+
+        result.append(prefix)
+                .append(error.getClassName())
+                .append(" [message omitted]\n");
+
+        int frames = 0;
+
+        for (var frame : error.getStackTraceElementProxyArray()) {
+            if (frames++ >= 64 || result.length() >= 8192) {
+                result.append("\t[remaining frames omitted]\n");
+                break;
+            }
+
+            result.append("\tat ").append(frame.getStackTraceElement()).append('\n');
+        }
+
+        if (error.getSuppressed() != null) {
+            for (var suppressed : error.getSuppressed()) {
+                append(result, suppressed, "Suppressed: ", seen, depth + 1);
+            }
+        }
+
+        append(result, error.getCause(), "Caused by: ", seen, depth + 1);
+    }
+}

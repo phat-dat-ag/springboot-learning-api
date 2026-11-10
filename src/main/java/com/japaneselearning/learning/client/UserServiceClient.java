@@ -41,14 +41,19 @@ public class UserServiceClient {
                     .body(InternalUserResponse.class);
         } catch (RestClientResponseException ex) {
             // Preserve the existing error contract without logging upstream bodies or user data.
-            log.warn("User Service request failed, status={}", ex.getStatusCode().value());
+            log.atWarn()
+                    .addKeyValue("event", "dependency.user.failed")
+                    .addKeyValue("upstream.status", ex.getStatusCode().value())
+                    .log("User Service request failed");
 
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         } catch (RestClientException ex) {
-            log.warn(
-                    "User Service request failed, type={}",
-                    ex.getClass().getSimpleName()
-            );
+            log.atWarn()
+                    .addKeyValue("event", "dependency.user.failed")
+                    .addKeyValue(
+                            "upstream.errorType",
+                            ex.getClass().getSimpleName()
+                    ).log("User Service request failed");
 
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
@@ -56,7 +61,9 @@ public class UserServiceClient {
                 || response.user() == null
                 || !uuid.equals(response.user().id())
         ) {
-            log.warn("User Service returned an invalid user response");
+            log.atWarn()
+                    .addKeyValue("event", "dependency.user.invalid_response")
+                    .log("User Service returned an invalid user response");
 
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
